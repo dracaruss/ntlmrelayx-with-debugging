@@ -144,9 +144,18 @@ class LDAPRelayClient(ProtocolClient):
 
         authMessage = NTLMAuthChallengeResponse()
         authMessage.fromString(token)
-        # relaytrace: announce the forward and whether we are about to drop the MIC
-        rt.forwarding("%s://%s" % (self.target.scheme, self.target.netloc), self.sessionData.get('authUser', '(user)'))
-        rt.mic_dropped(bool(self.serverConfig.remove_mic))
+
+        # --- relaytrace: confirm the REAL identity in the token being sent,
+        # and print the client's posture (MIC + channel binding) from the bytes.
+        try:
+            rt.token_identity(authMessage.getUserString())
+        except Exception:
+            rt.info("Token identity could not be parsed from the blob.")
+        try:
+            rt.auth_posture(authMessage['ntlm'])
+        except Exception:
+            rt.info("AV-pair posture could not be parsed from the blob.")
+
         # When exploiting CVE-2019-1040, remove flags
         if self.serverConfig.remove_mic:
             if authMessage['flags'] & NTLMSSP_NEGOTIATE_SIGN == NTLMSSP_NEGOTIATE_SIGN:
