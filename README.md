@@ -16,9 +16,9 @@ the editable clone once you install it.
 
 | File | Location (under the impacket package) | Action |
 |------|----------------------------------------|--------|
-| relaytrace.py | impacket/examples/ntlmrelayx/utils/ | ADD (new file) |
-| ldaprelayclient.py | impacket/examples/ntlmrelayx/clients/ | REPLACE with edited copy |
-| smbrelayserver.py | impacket/examples/ntlmrelayx/servers/ | HAND-PATCH in place |
+| relaytrace.py | impacket/impacket/examples/ntlmrelayx/utils/ | ADD (new file) |
+| ldaprelayclient.py | impacket/impacket/examples/ntlmrelayx/clients/ | REPLACE with edited copy |
+| smbrelayserver.py | impacket/impacket/examples/ntlmrelayx/servers/ | HAND-PATCH in place |
 
 
 ## Fresh install into a clean venv
