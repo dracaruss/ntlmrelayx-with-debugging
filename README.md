@@ -52,6 +52,11 @@ Verify:
 
 ## Placing the files
 
+The location of the original files is:
+/home/abacode/impacket/impacket/examples/ntlmrelayx/utils/relaytrace.py
+/home/abacode/impacket/impacket/examples/ntlmrelayx/clients/ldaprelayclient.py
+/home/abacode/impacket/impacket/examples/ntlmrelayx/servers/smbrelayserver.py
+
 1. Copy relaytrace.py into impacket/examples/ntlmrelayx/utils/
 2. Back up the original, then replace the client:
        copy impacket\examples\ntlmrelayx\clients\ldaprelayclient.py ldaprelayclient.py.bak
