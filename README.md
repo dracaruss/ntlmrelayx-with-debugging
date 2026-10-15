@@ -26,14 +26,14 @@ the editable clone once you install it.
 Run from inside your impacket clone (the folder with setup.py):
 
     # On Windows
-    python -m relayz .relayz
+    python -m venv .relayz
     .\.relayz\Scripts\Activate.ps1
     python -m pip install --upgrade pip
     python -m pip install -e .
 
 
     # On Linux
-    python3 -m relayz .relayz
+    python3 -m venv .relayz
     source .relayz/bin/activate
     python -m pip install --upgrade pip
     python -m pip install -e .
