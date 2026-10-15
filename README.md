@@ -22,6 +22,9 @@ the editable clone once you install it.
 
 
 ## Fresh install into a clean venv
+git clone https://github.com/fortra/impacket.git
+cd impacket
+python -m pip install -e .
 
 Run from inside your impacket clone (the folder with setup.py):
 
