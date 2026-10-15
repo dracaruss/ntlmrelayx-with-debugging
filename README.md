@@ -55,44 +55,7 @@ Verify:
 2. Back up the original, then replace the client:
        copy impacket\examples\ntlmrelayx\clients\ldaprelayclient.py ldaprelayclient.py.bak
    then drop the edited ldaprelayclient.py over it.
-3. Hand-patch smbrelayserver.py (three small inserts), described below.
-
-
-## smbrelayserver.py edits (in place)
-
-Back it up first: copy it to smbrelayserver.py.bak
-
-Edit A, imports. Near the other impacket imports at the top, add:
-
-    from impacket.examples.ntlmrelayx.utils import relaytrace as rt
-
-Edit B, capture + MIC decision. In SmbSessionSetup, in the
-`messageType == 0x03` block, right after:
-
-    self.authUser = authenticateMessage.getUserString()
-
-insert:
-
-    try:
-        mic_field = authenticateMessage['MIC']
-        mic_present = bool(mic_field) and mic_field != b'\x00' * 16
-    except Exception:
-        mic_present = None
-    rt.auth_captured(connData['ClientIP'], self.authUser, "NTLMv2",
-                     bool(mic_present))
-    rt.forwarding("%s://%s" % (self.target.scheme, self.target.netloc),
-                  self.authUser)
-    rt.mic_dropped(bool(self.config.remove_mic))
-
-Edit C, the coarse result. In the same block, at the
-`if errorCode != STATUS_SUCCESS:` branch add, as the first line inside it:
-
-    rt.bad("Target refused the relay (NT 0x%08x). LDAP client trace prints the reason." % (errorCode & 0xffffffff))
-
-and in the matching `else:` success branch add, as the first line:
-
-    rt.good("Relay authenticated as %s against %s://%s." % (self.authUser, self.target.scheme, self.target.netloc))
-
+3. Copy smbrelayserver.py to /home/abacode/impacket/impacket/examples/ntlmrelayx/servers/smbrelayserver.py
 
 ## The flags (what you actually pass to ntlmrelayx)
 
