@@ -18,7 +18,7 @@ the editable clone once you install it.
 |------|----------------------------------------|--------|
 | relaytrace.py | impacket/impacket/examples/ntlmrelayx/utils/ | ADD (new file) |
 | ldaprelayclient.py | impacket/impacket/examples/ntlmrelayx/clients/ | REPLACE with edited copy |
-| smbrelayserver.py | impacket/impacket/examples/ntlmrelayx/servers/ | HAND-PATCH in place |
+| smbrelayserver.py | impacket/impacket/examples/ntlmrelayx/servers/ | REPLACE with edited copy |
 
 
 ## Fresh install into a clean venv
@@ -55,7 +55,7 @@ Verify:
 2. Back up the original, then replace the client:
        copy impacket\examples\ntlmrelayx\clients\ldaprelayclient.py ldaprelayclient.py.bak
    then drop the edited ldaprelayclient.py over it.
-3. Copy smbrelayserver.py to /home/abacode/impacket/impacket/examples/ntlmrelayx/servers/smbrelayserver.py
+3. Copy smbrelayserver.py to /impacket/impacket/examples/ntlmrelayx/servers/smbrelayserver.py
 
 ## The flags (what you actually pass to ntlmrelayx)
 
