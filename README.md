@@ -1,104 +1,47 @@
-# ntlmrelayx relay tracing (relaytrace)
+# ntlmrelayx Relay Trace
 
-Plain-English, colored diagnostics for SMB to LDAP(S) relay attempts in
-impacket's ntlmrelayx. It answers, per relay attempt: was the auth captured,
-was the MIC dropped, were SIGN/SEAL flags stripped, was the bind accepted,
-and if it was refused, WHY (the NTLM sub-status the stock tool throws away).
+Colored, plain-English diagnostics for ntlmrelayx NTLM relay attempts. Tells you exactly why a relay failed instead of making you guess from raw LDAP result codes.
 
-This is instrumentation only. It adds no attack logic and changes no behavior.
+Built for Impacket **v0.14.0-dev** (commit `main` as of November 2026).
 
+## What It Does
 
-## Files you touch (3 total)
+When you run ntlmrelayx with these files in place, every relay attempt prints a step-by-step trace to your terminal showing what happened and why. You will see the captured identity, which NTLM flags were stripped, whether the client advertised channel binding, the LDAP bind result code, and the decoded Windows sub-status (SEC_E_BAD_BINDINGS, SEC_E_LOGON_DENIED, SEC_E_MESSAGE_ALTERED, etc.) with an explanation of what each one means in context.
 
-`ntlmrelayx.py` is NOT one of them. It is the script you run and it stays
-unchanged. Everything below lives in the installed impacket package, under
-the editable clone once you install it.
+## Files
 
-| File | Location (under the impacket package) | Action |
-|------|----------------------------------------|--------|
-| relaytrace.py | impacket/impacket/examples/ntlmrelayx/utils/ | ADD (new file) |
-| ldaprelayclient.py | impacket/impacket/examples/ntlmrelayx/clients/ | REPLACE with edited copy |
-| smbrelayserver.py | impacket/impacket/examples/ntlmrelayx/servers/ | REPLACE with edited copy |
+There are three files total. One is new, and two are patched copies of upstream Impacket files with a handful of added lines each.
 
+**relaytrace.py** is the instrumentation module. It has zero Impacket imports and only uses `sys` and `re` from the standard library, so it cannot cause version conflicts. This is the only new file.
 
-## Fresh install into a clean venv
-git clone https://github.com/fortra/impacket.git
-cd impacket
-python -m pip install -e .
+**ldaprelayclient.py** is the upstream LDAP relay client with six added lines that call relaytrace at the right moments: after NTLM flag manipulation, after parsing the auth token identity and AV pairs, and after the LDAP bind response arrives. All upstream functionality is preserved, including the LDAP signing bypass, shadow credentials, RBCD writes, and NegoEx detection.
 
-Run from inside your impacket clone (the folder with setup.py):
+**smbrelayserver.py** is the upstream SMB relay server with hooks in both the SMBv2 and SMBv1 authentication paths. Each path gets an `auth_captured`, `forwarding`, and `mic_dropped` call when the AUTHENTICATE message arrives, plus a success or failure indicator after the relay completes. All upstream functionality is preserved, including `applyReauthBypassNegotiate` and the reauth bypass system.
 
-    # On Windows
-    python -m venv .relayz
-    .\.relayz\Scripts\Activate.ps1
-    python -m pip install --upgrade pip
-    python -m pip install -e .
+## Installation
 
+Copy the three files into your Impacket source tree, replacing the two existing files and adding the new one.
 
-    # On Linux
-    python3 -m venv .relayz
-    source .relayz/bin/activate
-    python -m pip install --upgrade pip
-    python -m pip install -e .
+```
+cp relaytrace.py           /path/to/impacket/impacket/examples/ntlmrelayx/utils/relaytrace.py
+cp ldaprelayclient.py      /path/to/impacket/impacket/examples/ntlmrelayx/clients/ldaprelayclient.py
+cp smbrelayserver.py       /path/to/impacket/impacket/examples/ntlmrelayx/servers/smbrelayserver.py
+```
 
-The editable install (-e) makes the clone the live code, so the files you
-edit in the clone are exactly the ones that run. No copying into site-packages.
+If you installed Impacket with `pip install -e .` (editable mode), the changes take effect immediately. Otherwise, reinstall with `pip install .` from the Impacket root.
 
-Verify:
+Back up the originals first if you want a clean revert path.
 
-    pip show impacket          # must NOT say 0.10.0
-    ntlmrelayx.py -h           # must list --remove-sign-seal
+## Usage
 
+No new flags or options. Just run ntlmrelayx as you normally would. The trace output appears automatically alongside the standard Impacket logging.
 
-## Placing the files
-1. Copy relaytrace.py into impacket/examples/ntlmrelayx/utils/
-2. Back up the original, then replace the client:
-       copy impacket\examples\ntlmrelayx\clients\ldaprelayclient.py ldaprelayclient.py.bak
-   then drop the edited ldaprelayclient.py over it.
-3. Copy smbrelayserver.py to /impacket/impacket/examples/ntlmrelayx/servers/smbrelayserver.py
+```
+ntlmrelayx.py -t ldaps://10.0.0.11 -smb2support --remove-mic
+```
 
-## Run Da Traack
-``cd /home/abacode/impacket
-sudo .relayz/bin/python examples/ntlmrelayx.py -t ldap://AX-DC01.russfinancial.local --remove-mic --remove-sign-seal --escalate-user pentesting -smb2support``
+The trace lines are prefixed with colored tags: `[>] STEP`, `[+] OK`, `[!] WARN`, `[-] FAIL`, and `[*] INFO`. Colors work in modern terminals on both Linux and Windows. If your terminal does not support ANSI escapes, the output still works but without color.
 
-## The flags (what you actually pass to ntlmrelayx)
+## Reverting
 
-These are stock ntlmrelayx flags, not added by relaytrace. The tracing fires
-regardless of which you use.
-
-| Flag | Meaning |
-|------|---------|
-| -t ldaps://HOST | Relay target. Use ldaps:// for the LDAPS (636) path. |
-| -smb2support | Accept SMB2/3 from the coerced client. Keep it on. |
-| --remove-mic | Strip the MIC (CVE-2019-1040). Only lands on a DC UNPATCHED for the June 2019 fix. |
-| --remove-sign-seal | Strip SIGN/SEAL negotiate flags (CVE-2025-33073 path). Reflection-oriented. |
-| --escalate-user USER | ACL attack: grant USER rights via the relayed bind. |
-| --delegate-access | RBCD: configure delegation on the relayed computer account. |
-| -debug | Verbose impacket logging, independent of relaytrace output. |
-
-
-## Reading the output
-
-- `[*] INFO  Captured auth from <ip> as <acct> (NTLMv2, MIC present)`
-  The auth arrived and was parsed. MIC present/absent is the victim's message.
-- `[!] WARN  MIC stripped ...` or `[*] INFO  MIC left intact`
-  Whether --remove-mic acted before forwarding.
-- `[!] WARN  Cleared NTLM negotiate flags 0x... `
-  Which SIGN/SEAL flags were removed.
-- `[+] OK    Bind ACCEPTED ...`  the relay authenticated.
-- `[-] FAIL  Bind REFUSED (resultCode N, ...)` with a decoded sub-status:
-    - 8009030c SEC_E_LOGON_DENIED: credentials refused. Between two DCs this
-      usually means MIC removal was detected (target patched vs CVE-2019-1040).
-    - 8009030f SEC_E_MESSAGE_ALTERED: the message was seen as tampered; MIC
-      integrity check fired.
-    - 80090346 SEC_E_BAD_BINDINGS: channel binding mismatch; target enforces
-      LDAPS channel binding (set to Always). A "When Supported" DC does not
-      return this.
-
-If you see "no sub-status parsed," paste one failing run; the field name in
-your ldap3 build may differ and the decoder can be pointed at it.
-
-
-## Revert
-
-Restore the two .bak files and delete relaytrace.py. Nothing else changed.
+Delete `relaytrace.py` and restore the two original files from your backup or from a clean Impacket checkout. No other files are modified.
