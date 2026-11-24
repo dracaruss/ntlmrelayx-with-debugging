@@ -42,6 +42,10 @@ ntlmrelayx.py -t ldaps://10.0.0.11 -smb2support --remove-mic
 
 The trace lines are prefixed with colored tags: `[>] STEP`, `[+] OK`, `[!] WARN`, `[-] FAIL`, and `[*] INFO`. Colors work in modern terminals on both Linux and Windows. If your terminal does not support ANSI escapes, the output still works but without color.
 
+Note: Saying "the client requested signing" error means the coerced TARGET set signing itself even if the DC or the relayed-to final destination didn't. The NTLMSSP_NEGOTIATE_SIGN flag lives inside the NTLM token itself, and Windows sets it regardless of whether the transport is SMB or HTTP/WebDAV. A WebDAV coercion still produces an NTLM token with SIGN set. When the DC receives that flag inside an LDAP bind, it enforces LDAP session signing, which breaks your relay because you do not hold the session key needed to actually sign.
+
+That is exactly what --remove-sign-seal strips out of the token before forwarding it to the DC. Or --remove-mic on v0.12.0 or v0.13.1 or any older than -v0.14.0dev
+
 ## Reverting
 
 Delete `relaytrace.py` and restore the two original files from your backup or from a clean Impacket checkout. No other files are modified.
