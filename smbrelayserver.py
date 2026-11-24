@@ -25,6 +25,14 @@ from impacket.smbserver import decodeSMBString, encodeSMBString
 from impacket.smb3structs import SMB2Error
 from impacket.examples.ntlmrelayx.utils import relaytrace as rt
 
+# --- version-proof timestamp helper ---
+# v0.14.0-dev renamed smb.POSIXtoFT() to wintime.posix_to_filetime().
+# Try the new name first; fall back to the old one for v0.10-v0.13.
+try:
+    from impacket.wintime import posix_to_filetime as _posix_to_ft
+except ImportError:
+    _posix_to_ft = smb.POSIXtoFT
+
 def auth_callback(smbServer, connData, domain_name, user_name, host_name):
     user = user_name
     if domain_name:
@@ -202,8 +210,8 @@ class SMBRelayServer(Thread):
         respSMBCommand['MaxTransactSize'] = 65536
         respSMBCommand['MaxReadSize'] = 65536
         respSMBCommand['MaxWriteSize'] = 65536
-        respSMBCommand['SystemTime'] = smb.POSIXtoFT(calendar.timegm(time.gmtime()))
-        respSMBCommand['ServerStartTime'] = smb.POSIXtoFT(calendar.timegm(time.gmtime()))
+        respSMBCommand['SystemTime'] = _posix_to_ft(calendar.timegm(time.gmtime()))
+        respSMBCommand['ServerStartTime'] = _posix_to_ft(calendar.timegm(time.gmtime()))
         respSMBCommand['SecurityBufferOffset'] = 0x80
 
         blob = SPNEGO_NegTokenInit()
@@ -362,14 +370,15 @@ class SMBRelayServer(Thread):
                 mic_present = None
             rt.auth_captured(connData['ClientIP'], self.authUser, "NTLMv2", bool(mic_present))
             rt.forwarding("%s://%s" % (self.target.scheme, self.target.netloc), self.authUser)
-            rt.mic_dropped(bool(self.config.remove_mic))
+            _remove_mic = getattr(self.config, 'remove_mic', False)
+            rt.mic_dropped(bool(_remove_mic))
 
             if rawNTLM is True:
                 respToken2 = SPNEGO_NegTokenResp()
                 respToken2['ResponseToken'] = securityBlob
                 securityBlob = respToken2.getData()
 
-            if self.config.remove_mic:
+            if _remove_mic:
                 clientResponse, errorCode = self.do_ntlm_auth(client, token,
                                                               connData['CHALLENGE_MESSAGE']['challenge'])
             else:
@@ -725,7 +734,7 @@ class SMBRelayServer(Thread):
                     mic_present = None
                 rt.auth_captured(connData['ClientIP'], self.authUser, "NTLMv2", bool(mic_present))
                 rt.forwarding("%s://%s" % (self.target.scheme, self.target.netloc), self.authUser)
-                rt.mic_dropped(bool(self.config.remove_mic))
+                rt.mic_dropped(bool(getattr(self.config, 'remove_mic', False)))
 
                 clientResponse, errorCode = self.do_ntlm_auth(client,sessionSetupData['SecurityBlob'],
                                                               connData['CHALLENGE_MESSAGE']['challenge'])

