@@ -41,6 +41,12 @@ def info(msg): _tag("[*]", BLU, "INFO", msg)
 # --- captured authentication -------------------------------------------------
 
 def auth_captured(src_ip, account, ntlm_version, mic_present):
+    if not account or account.strip() in ("", "\\", "/"):
+        warn(f"Captured auth from {_c(BOLD, src_ip)} but the account name is "
+             f"{_c(RED, 'EMPTY')}. This means ntlmrelayx could not read a "
+             "username from the NTLM token. The bind may succeed, but the "
+             "attack module will fail because it cannot find this account in AD.")
+        return
     info(f"Captured auth from {_c(BOLD, src_ip)} as {_c(BOLD, account)} "
          f"({ntlm_version}, MIC {'present' if mic_present else 'absent'})")
 
@@ -134,6 +140,13 @@ def auth_posture(ntlm_response):
 def token_identity(account_string):
     """Confirm the real identity carried in the token actually being sent,
     so the '(user)' label seen elsewhere is shown to be cosmetic."""
+    if not account_string or account_string.strip() in ("", "\\", "/"):
+        warn("Token identity is EMPTY. The relayed account name could not be "
+             "parsed from the NTLM token. This usually means a machine account "
+             "authenticated over HTTP/WebDAV and the username field came through "
+             "blank. The relay may still bind to LDAP, but the attack module "
+             "will crash when it tries to look up the account in AD.")
+        return
     info(f"Token identity parsed from the blob being sent: {_c(BOLD, account_string)} "
          "(confirms the real auth, not a placeholder, is forwarded)")
 
